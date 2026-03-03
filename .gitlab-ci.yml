@@ -9,8 +9,11 @@ variables:
   CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/$CI_PROJECT_NAME/backend"
   CI_REGISTRY_IMAGE_FRONTEND: "$CI_REGISTRY/$CI_PROJECT_NAME/frontend"
 
+  # Docker settings - ВАЖНО!
   DOCKER_TLS_CERTDIR: ""
   DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_VERIFY: ""
+  DOCKER_CERT_PATH: ""
   DOCKER_DRIVER: overlay2
 
 cache:
@@ -52,8 +55,10 @@ build-backend:
       command: ["--insecure-registry=192.168.0.147:5050"]
   variables:
     DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_VERIFY: ""
+    DOCKER_CERT_PATH: ""
   before_script:
-    - export DOCKER_TLS_VERIFY=0
     - echo "$CI_JOB_TOKEN" | docker login http://192.168.0.147:5050 -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
@@ -72,8 +77,10 @@ build-frontend:
       command: ["--insecure-registry=192.168.0.147:5050"]
   variables:
     DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_VERIFY: ""
+    DOCKER_CERT_PATH: ""
   before_script:
-    - export DOCKER_TLS_VERIFY=0
     - echo "$CI_JOB_TOKEN" | docker login http://192.168.0.147:5050 -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
@@ -107,8 +114,7 @@ deploy:
     # На сервере: обновляем и перезапускаем
     - ssh $SSH_USER@$PROD_SERVER "
         cd /home/$SSH_USER/project &&
-        export DOCKER_TLS_VERIFY=0 &&
-        echo '$CI_JOB_TOKEN' | docker login --insecure http://192.168.0.147:5050 -u git --password-stdin &&
+        echo '$CI_JOB_TOKEN' | docker login http://192.168.0.147:5050 -u git --password-stdin &&
         docker-compose down &&
         docker-compose pull &&
         docker-compose up -d &&
