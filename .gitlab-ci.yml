@@ -51,7 +51,7 @@ build-backend:
   image: docker:24.0.5-cli
   services:
     - name: docker:24.0.5-dind
-    - command: ["--insecure-registry=192.168.0.147:5050"]
+      command: ["--insecure-registry=192.168.0.147:5050"]
   before_script:
     - echo "$CI_JOB_TOKEN" | docker login $CI_REGISTRY -u git --password-stdin
   script:
