@@ -6,6 +6,13 @@ stages:
 # ===============================
 # ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
 # ===============================
+default:
+  image: docker:24.0.5-cli
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - docker info
+
 variables:
   CI_REGISTRY: "192.168.0.147:5050"
   CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/$CI_PROJECT_NAME/backend"
@@ -55,10 +62,6 @@ test-frontend:
 # ===============================
 build-backend:
   stage: build
-  image: docker:24
-  services:
-    - name: docker:24-dind
-      command: ["--insecure-registry=192.168.0.147:5050"]
   before_script:
     - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
   script:
@@ -74,10 +77,6 @@ build-backend:
 # ===============================
 build-frontend:
   stage: build
-  image: docker:24
-  services:
-    - name: docker:24-dind
-      command: ["--insecure-registry=192.168.0.147:5050"]
   before_script:
     - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
   script:
