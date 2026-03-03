@@ -11,6 +11,7 @@ variables:
   CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/$CI_PROJECT_NAME/backend"
   CI_REGISTRY_IMAGE_FRONTEND: "$CI_REGISTRY/$CI_PROJECT_NAME/frontend"
 
+  # Docker-in-Docker
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
@@ -19,17 +20,6 @@ cache:
   paths:
     - backend/__pycache__/
     - frontend/node_modules/
-
-# ===============================
-# ОБЩИЙ ШАБЛОН DOCKER JOB
-# ===============================
-.docker-build-template:
-  image: docker:24
-  services:
-    - docker:24-dind
-  before_script:
-    - docker info
-    - echo "$MY_REGISTRY_TOKEN" | docker login $CI_REGISTRY -u git --password-stdin
 
 # ===============================
 # ТЕСТЫ BACKEND
@@ -66,7 +56,14 @@ test-frontend:
 # ===============================
 build-backend:
   stage: build
-  extends: .docker-build-template
+  image: docker:24
+  services:
+    - name: docker:24-dind
+      command: ["--insecure-registry=192.168.0.147:5050"]
+      privileged: true
+  before_script:
+    - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
+    - docker info  # Проверка соединения с DIND
   script:
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
     - docker tag $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_BACKEND:latest
@@ -80,7 +77,14 @@ build-backend:
 # ===============================
 build-frontend:
   stage: build
-  extends: .docker-build-template
+  image: docker:24
+  services:
+    - name: docker:24-dind
+      command: ["--insecure-registry=192.168.0.147:5050"]
+      privileged: true
+  before_script:
+    - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
+    - docker info  # Проверка соединения с DIND
   script:
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
     - docker tag $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_FRONTEND:latest
@@ -107,11 +111,10 @@ deploy:
     - scp -r nginx/ $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
     - scp -r apache/ $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
     - scp -r monitoring/ $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
-
     - |
       ssh $SSH_USER@$PROD_SERVER "
         cd /home/$SSH_USER/project &&
-        echo '$MY_REGISTRY_TOKEN' | docker login $CI_REGISTRY -u git --password-stdin &&
+        echo '$MY_REGISTRY_TOKEN' | docker login 192.168.0.147:5050 -u git --password-stdin &&
         docker compose down &&
         docker compose pull &&
         docker compose up -d &&
