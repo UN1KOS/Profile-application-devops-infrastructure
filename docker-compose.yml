@@ -1,6 +1,7 @@
 services:
   frontend:
-    build: ./frontend
+    #build: ./frontend
+    image: 192.168.0.147:5050/profile-app/frontend:latest
     container_name: react-app
     ports:  
       - "3000:80"  
@@ -11,7 +12,8 @@ services:
 
 
   backend:
-    build: ./backend
+    #build: ./backend
+    image: 192.168.0.147:5050/profile-app/backend:latest
     container_name: fastapi-app
     expose:
       - "8000"
@@ -50,7 +52,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123  
