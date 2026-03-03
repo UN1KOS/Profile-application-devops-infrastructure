@@ -18,6 +18,7 @@ variables:
   CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/$CI_PROJECT_NAME/backend"
   CI_REGISTRY_IMAGE_FRONTEND: "$CI_REGISTRY/$CI_PROJECT_NAME/frontend"
 
+  # Docker-in-Docker
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
@@ -64,6 +65,7 @@ build-backend:
   stage: build
   before_script:
     - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
+    - docker info  # Проверка соединения с DIND
   script:
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
     - docker tag $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_BACKEND:latest
@@ -79,6 +81,7 @@ build-frontend:
   stage: build
   before_script:
     - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
+    - docker info  # Проверка соединения с DIND
   script:
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
     - docker tag $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_FRONTEND:latest
@@ -101,13 +104,10 @@ deploy:
     - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
     - chmod 600 ~/.ssh/known_hosts
   script:
-    # Копируем конфиги на прод
     - scp docker-compose.yml $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
     - scp -r nginx/ $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
     - scp -r apache/ $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
     - scp -r monitoring/ $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
-
-    # Деплой на проде
     - |
       ssh $SSH_USER@$PROD_SERVER "
         cd /home/$SSH_USER/project &&
