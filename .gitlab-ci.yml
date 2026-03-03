@@ -50,7 +50,7 @@ build-backend:
   services:
     - docker:dind
   before_script:
-    - docker login http://192.168.0.147:5050 -u git --password-stdin <<< "$CI_JOB_TOKEN"
+    - echo "$MY_REGISTRY_TOKEN" | docker login http://192.168.0.147:5050 -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
     - docker tag $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_BACKEND:latest
@@ -66,7 +66,7 @@ build-frontend:
   services:
     - docker:dind
   before_script:
-    - docker login http://192.168.0.147:5050 -u git --password-stdin <<< "$CI_JOB_TOKEN"
+    - echo "$MY_REGISTRY_TOKEN" | docker login http://192.168.0.147:5050 -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
     - docker tag $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_FRONTEND:latest
@@ -99,7 +99,7 @@ deploy:
     # На сервере: обновляем и перезапускаем
     - ssh $SSH_USER@$PROD_SERVER "
         cd /home/$SSH_USER/project &&
-        echo '$CI_JOB_TOKEN' | docker login http://192.168.0.147:5050 -u git --password-stdin &&
+        echo '$MY_REGISTRY_TOKEN' | docker login http://192.168.0.147:5050 -u git --password-stdin &&
         docker-compose down &&
         docker-compose pull &&
         docker-compose up -d &&
