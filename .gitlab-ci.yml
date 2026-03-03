@@ -53,7 +53,7 @@ build-backend:
     - name: docker:24.0.5-dind
     - command: ["--insecure-registry=192.168.0.147:5050"]
   before_script:
-    - echo "$CI_JOB_TOKEN" | docker login $CI_REGISTRY -u git --password-stdin
+      - echo "$CI_JOB_TOKEN" | docker login --insecure-registry=true $CI_REGISTRY -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
     - docker tag $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_BACKEND:latest
@@ -69,7 +69,7 @@ build-frontend:
     - name: docker:24.0.5-dind
       command: ["--insecure-registry=192.168.0.147:5050"]
   before_script:
-    - echo "$CI_JOB_TOKEN" | docker login $CI_REGISTRY -u git --password-stdin
+    - echo "$CI_JOB_TOKEN" | docker login --insecure-registry=true $CI_REGISTRY -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
     - docker tag $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_FRONTEND:latest
