@@ -92,29 +92,28 @@ deploy:
     - echo "  User $SSH_USER" >> ~/.ssh/config
     - chmod 600 ~/.ssh/config
   script:
-    # Копируем файлы на продакшен сервер
     - scp docker-compose.yml $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
     - scp -r nginx/ $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
     - scp -r apache/ $SSH_USER@$PROD_SERVER:/home/$SSH_USER/project/
     
     # На сервере: обновляем и перезапускаем
     - ssh $SSH_USER@$PROD_SERVER "
-        cd /home/$SSH_USER/project &&
+    - cd /home/$SSH_USER/project &&
         
         # Логинимся в registry
-        echo '$CI_JOB_TOKEN' | docker login $CI_REGISTRY -u git --password-stdin &&
+    - echo '$CI_JOB_TOKEN' | docker login $CI_REGISTRY -u git --password-stdin &&
         
         # Останавливаем старые контейнеры
-        docker-compose down &&
+    - docker-compose down &&
         
         # Обновляем образы
-        docker-compose pull &&
+    - docker-compose pull &&
         
         # Запускаем заново
-        docker-compose up -d &&
+    - docker-compose up -d &&
         
         # Чистим старые образы
-        docker system prune -f
+    - docker system prune -f
       "
   only:
     - main
