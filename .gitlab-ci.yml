@@ -52,8 +52,12 @@ build-backend:
   services:
     - name: docker:24.0.5-dind
       command: ["--insecure-registry=192.168.0.147:5050"]
+  variables:
+    DOCKER_TLS_CERTDIR: ""
   before_script:
-      - echo "$CI_JOB_TOKEN" | docker login --insecure-registry=true $CI_REGISTRY -u git --password-stdin
+    - mkdir -p ~/.docker
+    - echo '{"insecure-registries": ["192.168.0.147:5050"]}' > ~/.docker/config.json
+    - echo "$CI_JOB_TOKEN" | docker login $CI_REGISTRY -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
     - docker tag $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_BACKEND:latest
@@ -61,15 +65,18 @@ build-backend:
     - docker push $CI_REGISTRY_IMAGE_BACKEND:latest
   only:
     - main
-
 build-frontend:
   stage: build
   image: docker:24.0.5-cli
   services:
     - name: docker:24.0.5-dind
       command: ["--insecure-registry=192.168.0.147:5050"]
+  variables:
+    DOCKER_TLS_CERTDIR: ""
   before_script:
-    - echo "$CI_JOB_TOKEN" | docker login --insecure-registry=true $CI_REGISTRY -u git --password-stdin
+    - mkdir -p ~/.docker
+    - echo '{"insecure-registries": ["192.168.0.147:5050"]}' > ~/.docker/config.json
+    - echo "$CI_JOB_TOKEN" | docker login $CI_REGISTRY -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
     - docker tag $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_FRONTEND:latest
@@ -77,7 +84,6 @@ build-frontend:
     - docker push $CI_REGISTRY_IMAGE_FRONTEND:latest
   only:
     - main
-
 deploy:
   stage: deploy
   image: alpine:latest
