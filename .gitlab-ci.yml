@@ -8,7 +8,7 @@ variables:
   CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/$CI_PROJECT_NAME/backend"
   CI_REGISTRY_IMAGE_FRONTEND: "$CI_REGISTRY/$CI_PROJECT_NAME/frontend"
 
-  # Docker settings - максимально просто
+  # Docker settings
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
@@ -46,14 +46,11 @@ test-frontend:
 # ========== СБОРКА BACKEND ==========
 build-backend:
   stage: build
-  image: docker:24.0.5-cli-dind  # <--- ИЗМЕНЕНО!
+  image: docker:dind
   services:
-    - docker:24.0.5-dind
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
+    - docker:dind
   before_script:
-    - echo "$CI_JOB_TOKEN" | docker login http://192.168.0.147:5050 -u git --password-stdin
+    - docker login http://192.168.0.147:5050 -u git --password-stdin <<< "$CI_JOB_TOKEN"
   script:
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
     - docker tag $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_BACKEND:latest
@@ -65,14 +62,11 @@ build-backend:
 # ========== СБОРКА FRONTEND ==========
 build-frontend:
   stage: build
-  image: docker:24.0.5-cli-dind  # <--- ИЗМЕНЕНО!
+  image: docker:dind
   services:
-    - docker:24.0.5-dind
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
+    - docker:dind
   before_script:
-    - echo "$CI_JOB_TOKEN" | docker login http://192.168.0.147:5050 -u git --password-stdin
+    - docker login http://192.168.0.147:5050 -u git --password-stdin <<< "$CI_JOB_TOKEN"
   script:
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
     - docker tag $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_FRONTEND:latest
