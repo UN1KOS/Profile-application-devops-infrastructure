@@ -4,7 +4,7 @@ stages:
   - deploy
 
 variables:
-  CI_REGISTRY: "http://192.168.0.147:5050"
+  CI_REGISTRY: "192.168.0.147:5050"
   CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/$CI_PROJECT_NAME/backend"
   CI_REGISTRY_IMAGE_FRONTEND: "$CI_REGISTRY/$CI_PROJECT_NAME/frontend"
 
@@ -52,9 +52,6 @@ build-backend:
   variables:
     DOCKER_TLS_CERTDIR: ""
   before_script:
-    - mkdir -p ~/.docker
-    - |
-      echo '{"insecure-registries": ["192.168.0.147:5050"]}'  > ~/.docker/config.json
     - echo "$CI_JOB_TOKEN" | docker login $CI_REGISTRY -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
@@ -74,9 +71,6 @@ build-frontend:
   variables:
     DOCKER_TLS_CERTDIR: ""
   before_script:
-    - mkdir -p ~/.docker
-    - |
-      echo '{"insecure-registries": ["192.168.0.147:5050"]}' > ~/.docker/config.json
     - echo "$CI_JOB_TOKEN" | docker login $CI_REGISTRY -u git --password-stdin
   script:
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
