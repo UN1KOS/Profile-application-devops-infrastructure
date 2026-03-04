@@ -51,8 +51,6 @@ build-backend:
   stage: build
   before_script:
     # Копируем сертификат для registry
-    - mkdir -p /etc/docker/certs.d/192.168.0.147:5050
-    - cp /certs/client/ca.crt /etc/docker/certs.d/192.168.0.147:5050/ca.crt 2>/dev/null || echo "Сертификат уже есть"
     - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
     - docker info
   script:
@@ -66,8 +64,6 @@ build-backend:
 build-frontend:
   stage: build
   before_script:
-    - mkdir -p /etc/docker/certs.d/192.168.0.147:5050
-    - cp /certs/client/ca.crt /etc/docker/certs.d/192.168.0.147:5050/ca.crt 2>/dev/null || echo "Сертификат уже есть"
     - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
     - docker info
   script:
