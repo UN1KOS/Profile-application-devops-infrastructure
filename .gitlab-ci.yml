@@ -62,6 +62,8 @@ test-frontend:
 
 build-backend:
   stage: build
+  before_script:
+    - echo "Frontend Test Started!"
   script:
     - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
