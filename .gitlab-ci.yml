@@ -32,6 +32,8 @@ cache:
   paths:
     - frontend/node_modules/
     - backend/__pycache__/
+    - ~/.npm
+    - ~/cache/pip
 
 # =========================
 # TEST
