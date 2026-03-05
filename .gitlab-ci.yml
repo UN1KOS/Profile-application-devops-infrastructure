@@ -14,6 +14,7 @@ default:
         ]
   before_script:
     - docker info
+    - export DOCKER_TLS_VERIFY=0
     - | 
       echo '{"insecure-registries": ["192.168.0.147:5050"]}' > /etc/docker/daemon.json 
 
