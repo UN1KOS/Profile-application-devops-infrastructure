@@ -112,8 +112,9 @@ async def root(request: Request):
     return {
         "message": "FastAPI работает! 🚀",
         "endpoints": {
-            "profiles": "/profiles",
-            "admin": "/admin",
+            "profiles": "/profiles (GET, POST)",
+            "profile_by_id": "/profiles/{id} (GET, PUT, DELETE)",
+            "admin": "/admin (нужен пароль)",
         },
     }
 
@@ -161,3 +162,128 @@ async def get_profile(profile_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/profiles")
+async def create_profile(profile: ProfileCreate):
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        avatar = profile.avatar or f"https://api.dicebear.com/7.x/avataaars/svg?seed={profile.username}"
+
+        row = await conn.fetchrow(
+            """
+            INSERT INTO profiles (username, avatar)
+            VALUES ($1, $2)
+            RETURNING id, username, avatar, created_at
+            """,
+            profile.username,
+            avatar,
+        )
+        await conn.close()
+        return {"profile": dict(row), "message": "Profile created"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/profiles/{profile_id}")
+async def update_profile(profile_id: str, profile_update: ProfileUpdate):
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+
+        # Получаем текущий профиль
+        current = await conn.fetchrow(
+            "SELECT * FROM profiles WHERE id = $1",
+            profile_id,
+        )
+        if not current:
+            await conn.close()
+            raise HTTPException(status_code=404, detail="Profile not found")
+
+        # Обновляем только переданные поля
+        username = profile_update.username if profile_update.username is not None else current["username"]
+        avatar = profile_update.avatar if profile_update.avatar is not None else current["avatar"]
+
+        # Проверяем что имя не пустое
+        if not username or username.strip() == "":
+            await conn.close()
+            raise HTTPException(status_code=400, detail="Username cannot be empty")
+
+        row = await conn.fetchrow(
+            """
+            UPDATE profiles
+            SET username = $1, avatar = $2, updated_at = NOW()
+            WHERE id = $3
+            RETURNING id, username, avatar, created_at, updated_at
+            """,
+            username.strip(),
+            avatar,
+            profile_id,
+        )
+        await conn.close()
+
+        return {"profile": dict(row), "message": "Profile updated"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/profiles/{profile_id}")
+async def delete_profile(profile_id: str):
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+
+        # Проверяем что профиль существует
+        profile = await conn.fetchrow(
+            "SELECT * FROM profiles WHERE id = $1",
+            profile_id,
+        )
+        if not profile:
+            await conn.close()
+            raise HTTPException(status_code=404, detail="Profile not found")
+
+        await conn.execute(
+            "DELETE FROM profiles WHERE id = $1",
+            profile_id,
+        )
+        await conn.close()
+
+        return {"message": f"Profile {profile_id} deleted", "deleted_profile": dict(profile)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============= АДМИНКА =============
+@app.post("/admin/login")
+async def admin_login(admin_data: AdminAction):
+    """Вход в админку"""
+    is_admin = await verify_admin(admin_data.admin_password)
+    if is_admin:
+        return {"success": True, "message": "Admin access granted"}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid password")
+
+
+@app.post("/admin/profiles/{profile_id}")
+async def admin_update_profile(profile_id: str, profile_update: ProfileUpdate, admin_data: AdminAction):
+    """Админ может редактировать любой профиль"""
+    is_admin = await verify_admin(admin_data.admin_password)
+    if not is_admin:
+        raise HTTPException(status_code=401, detail="Admin access required")
+
+    return await update_profile(profile_id, profile_update)
+
+
+@app.delete("/admin/profiles/{profile_id}")
+async def admin_delete_profile(profile_id: str, admin_data: AdminAction):
+    """Админ может удалить любой профиль"""
+    is_admin = await verify_admin(admin_data.admin_password)
+    if not is_admin:
+        raise HTTPException(status_code=401, detail="Admin access required")
+
+    return await delete_profile(profile_id)
