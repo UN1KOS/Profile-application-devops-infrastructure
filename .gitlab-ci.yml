@@ -3,116 +3,134 @@ stages:
   - build
   - deploy
 
+# =========================
+# GLOBAL CONFIG
+# =========================
+
 default:
   image: docker:24.0.5-cli
+
   services:
     - name: docker:24.0.5-dind
       command:
         - "--host=tcp://0.0.0.0:2375"
         - "--tls=false"
         - "--insecure-registry=192.168.0.147:5050"
+
   before_script:
     - docker info
-    - export DOCKER_TLS_VERIFY=0
-    - export DOCKER_CONFIG=/tmp/docker-config-$CI_JOB_ID
+    - unset DOCKER_TLS_VERIFY
+    - export DOCKER_CONFIG=/tmp/docker-config
     - mkdir -p $DOCKER_CONFIG
-    - echo '{}' > $DOCKER_CONFIG/config.json
 
 variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
-  DOCKER_TLS_VERIFY: ""
   CI_REGISTRY: "192.168.0.147:5050"
   CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/root/$CI_PROJECT_NAME/backend"
   CI_REGISTRY_IMAGE_FRONTEND: "$CI_REGISTRY/root/$CI_PROJECT_NAME/frontend"
 
 cache:
   paths:
-    - backend/__pycache__/
     - frontend/node_modules/
+    - backend/__pycache__/
 
 # =========================
-# TEST STAGE
+# TEST
 # =========================
 
 test-backend:
   stage: test
   image: python:3.12-slim
+
   before_script:
     - pip install flake8 pytest
     - pip install -r backend/requirements.txt
+
   script:
     - flake8 backend/ --max-line-length=120
-    - cd backend && python -m pytest || echo "Нет тестов — пропускаем"
+    - cd backend
+    - python -m pytest || echo "No tests"
+
   only:
     - main
     - merge_requests
+
 
 test-frontend:
   stage: test
   image: node:18-alpine
-  before_script:
-    - echo "Frontend Test Started!"
+
   script:
     - cd frontend
     - npm install
-    - npm run lint || echo "Нет линтера — пропускаем"
+    - npm run lint || echo "No linter"
+
   only:
     - main
     - merge_requests
 
 # =========================
-# BUILD STAGE
+# BUILD BACKEND
 # =========================
 
 build-backend:
   stage: build
+
   before_script:
-    # Переопределяем before_script для этого job
-    - export DOCKER_TLS_VERIFY=0
-    - export DOCKER_CONFIG=/tmp/docker-config-$CI_JOB_ID
-    - mkdir -p $DOCKER_CONFIG
-    # Логинимся в registry с отключенным TLS
+    - unset DOCKER_TLS_VERIFY
     - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
+
   script:
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
     - docker tag $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_BACKEND:latest
+
     - docker push $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA
     - docker push $CI_REGISTRY_IMAGE_BACKEND:latest
+
   only:
     - main
 
+
+# =========================
+# BUILD FRONTEND
+# =========================
+
 build-frontend:
   stage: build
+
   before_script:
-    # Переопределяем before_script для этого job
-    - export DOCKER_TLS_VERIFY=0
-    - export DOCKER_CONFIG=/tmp/docker-config-$CI_JOB_ID
-    - mkdir -p $DOCKER_CONFIG
-    # Логинимся в registry с отключенным TLS
+    - unset DOCKER_TLS_VERIFY
     - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
+
   script:
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
     - docker tag $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_FRONTEND:latest
+
     - docker push $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA
     - docker push $CI_REGISTRY_IMAGE_FRONTEND:latest
+
   only:
     - main
 
 # =========================
-# DEPLOY STAGE
+# DEPLOY
 # =========================
 
 deploy:
   stage: deploy
   image: alpine:latest
+
   before_script:
     - apk add --no-cache openssh-client
     - eval $(ssh-agent -s)
+
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+
     - mkdir -p ~/.ssh
     - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
     - chmod 600 ~/.ssh/known_hosts
+
   script:
     - |
       ssh $SSH_USER@$PROD_SERVER "
@@ -122,8 +140,10 @@ deploy:
         docker compose up -d &&
         docker image prune -f
       "
-  only:
-    - main
+
   environment:
     name: production
     url: http://$PROD_SERVER
+
+  only:
+    - main
