@@ -60,7 +60,7 @@ test-backend:
 test-frontend:
   stage: test
   image: node:18-alpine
-
+  before_script: []
   script:
     - cd frontend
     - npm install
