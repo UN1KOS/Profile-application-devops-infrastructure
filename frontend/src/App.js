@@ -4,7 +4,7 @@ import AdminPanel from './AdminPanel';
 import './styles.css';
 import { FaUser, FaSignInAlt, FaSignOutAlt, FaCog } from 'react-icons/fa';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.0.109/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.0.109';
 
 function App() {
   const [profiles, setProfiles] = useState([]);
@@ -12,10 +12,7 @@ function App() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [newProfile, setNewProfile] = useState({
-    username: '',
-    avatar: ''
-  });
+  const [newProfile, setNewProfile] = useState({ username: '', avatar: '' });
   const [message, setMessage] = useState({ text: '', type: '' });
 
   useEffect(() => {
@@ -29,6 +26,10 @@ function App() {
     }
   }, [message]);
 
+  const showMessage = (text, type) => {
+    setMessage({ text, type });
+  };
+
   const fetchProfiles = async () => {
     try {
       const response = await fetch(`${API_URL}/profiles`);
@@ -37,10 +38,6 @@ function App() {
     } catch (error) {
       showMessage('Ошибка загрузки профилей', 'error');
     }
-  };
-
-  const showMessage = (text, type) => {
-    setMessage({ text, type });
   };
 
   const createProfile = async (e) => {
@@ -59,11 +56,12 @@ function App() {
           avatar: newProfile.avatar || null
         })
       });
+
       const data = await response.json();
-      
+
       if (response.ok) {
-        setProfiles([...profiles, data.profile]);
-        setCurrentProfile(data.profile);
+        setProfiles([...profiles, data]);
+        setCurrentProfile(data);
         setShowCreateForm(false);
         setNewProfile({ username: '', avatar: '' });
         showMessage('Профиль создан!', 'success');
@@ -82,15 +80,13 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedData)
       });
+
       const data = await response.json();
-      
+
       if (response.ok) {
-        // Обновляем профиль в списке
-        setProfiles(profiles.map(p => 
-          p.id === profileId ? data.profile : p
-        ));
+        setProfiles(profiles.map(p => (p.id === profileId ? data : p)));
         if (currentProfile && currentProfile.id === profileId) {
-          setCurrentProfile(data.profile);
+          setCurrentProfile(data);
         }
         showMessage('Профиль обновлен!', 'success');
         return true;
@@ -105,7 +101,7 @@ function App() {
   };
 
   const deleteProfile = async (profileId) => {
-    if (!window.confirm('Вы уверены, что хотите удалить этот профиль?')) {
+    if (!window.confirm('Вы уверены, что хотите удалить профиль?')) {
       return false;
     }
 
@@ -113,7 +109,7 @@ function App() {
       const response = await fetch(`${API_URL}/profiles/${profileId}`, {
         method: 'DELETE'
       });
-      
+
       if (response.ok) {
         setProfiles(profiles.filter(p => p.id !== profileId));
         if (currentProfile && currentProfile.id === profileId) {
@@ -155,7 +151,7 @@ function App() {
           <h1>🎭 Profile App</h1>
           {isAdmin && <span className="admin-badge">Admin</span>}
         </div>
-        
+
         <div className="header-right">
           {!currentProfile ? (
             <>
@@ -181,14 +177,12 @@ function App() {
       </header>
 
       {message.text && (
-        <div className={`message ${message.type}`}>
-          {message.text}
-        </div>
+        <div className={`message ${message.type}`}>{message.text}</div>
       )}
 
       <main className="main">
         {showAdminPanel ? (
-          <AdminPanel 
+          <AdminPanel
             onClose={() => setShowAdminPanel(false)}
             onLogin={setIsAdmin}
             isAdmin={isAdmin}
@@ -199,22 +193,22 @@ function App() {
             showMessage={showMessage}
           />
         ) : currentProfile ? (
-          <Profile 
-            profile={currentProfile} 
+          <Profile
+            profile={currentProfile}
             onUpdate={updateProfile}
             onDelete={deleteProfile}
             isAdmin={isAdmin}
           />
         ) : (
           <div className="profiles-grid">
-            {profiles.map(profile => (
-              <div 
-                key={profile.id} 
+            {(profiles || []).map(profile => (
+              <div
+                key={profile.id}
                 className="profile-card"
                 onClick={() => setCurrentProfile(profile)}
               >
-                <img 
-                  src={profile.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`} 
+                <img
+                  src={profile.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
                   alt={profile.username}
                   className="avatar"
                   onError={(e) => {
@@ -239,38 +233,21 @@ function App() {
                 <label>Имя пользователя:</label>
                 <input
                   type="text"
-                  placeholder="Введите имя"
                   value={newProfile.username}
                   onChange={(e) => setNewProfile({...newProfile, username: e.target.value})}
                   required
-                  autoFocus
                 />
               </div>
-              
+
               <div className="form-group">
                 <label>URL аватарки (необязательно):</label>
                 <input
                   type="url"
-                  placeholder="https://example.com/avatar.jpg"
                   value={newProfile.avatar}
                   onChange={(e) => setNewProfile({...newProfile, avatar: e.target.value})}
                 />
-                <small>Оставьте пустым для случайной аватарки</small>
               </div>
-              
-              {newProfile.avatar && (
-                <div className="avatar-preview">
-                  <img 
-                    src={newProfile.avatar} 
-                    alt="preview" 
-                    className="preview"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-              
+
               <div className="modal-buttons">
                 <button type="submit" className="btn-primary">Создать</button>
                 <button type="button" onClick={() => setShowCreateForm(false)} className="btn-secondary">
