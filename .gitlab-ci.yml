@@ -2,23 +2,30 @@ stages:
   - test
   - build
   - deploy
+
 default:
   image: docker:24.0.5-cli
   services:
     - name: docker:24.0.5-dind
-      command: 
+      command:
         - "--host=tcp://0.0.0.0:2375"
         - "--tls=false"
+        - "--insecure-registry=192.168.0.147:5050"
   before_script:
     - docker info
     - export DOCKER_TLS_VERIFY=0
+    - export DOCKER_CONFIG=/tmp/docker-config-$CI_JOB_ID
+    - mkdir -p $DOCKER_CONFIG
+    - echo '{}' > $DOCKER_CONFIG/config.json
 
 variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
+  DOCKER_TLS_VERIFY: ""
   CI_REGISTRY: "192.168.0.147:5050"
   CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/root/$CI_PROJECT_NAME/backend"
   CI_REGISTRY_IMAGE_FRONTEND: "$CI_REGISTRY/root/$CI_PROJECT_NAME/frontend"
+
 cache:
   paths:
     - backend/__pycache__/
@@ -60,9 +67,14 @@ test-frontend:
 
 build-backend:
   stage: build
-
+  before_script:
+    # Переопределяем before_script для этого job
+    - export DOCKER_TLS_VERIFY=0
+    - export DOCKER_CONFIG=/tmp/docker-config-$CI_JOB_ID
+    - mkdir -p $DOCKER_CONFIG
+    # Логинимся в registry с отключенным TLS
+    - echo "$MY_REGISTRY_TOKEN" | docker login --tlsverify=false 192.168.0.147:5050 -u git --password-stdin
   script:
-    - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
     - docker build -t $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA ./backend
     - docker tag $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_BACKEND:latest
     - docker push $CI_REGISTRY_IMAGE_BACKEND:$CI_COMMIT_SHORT_SHA
@@ -72,8 +84,14 @@ build-backend:
 
 build-frontend:
   stage: build
+  before_script:
+    # Переопределяем before_script для этого job
+    - export DOCKER_TLS_VERIFY=0
+    - export DOCKER_CONFIG=/tmp/docker-config-$CI_JOB_ID
+    - mkdir -p $DOCKER_CONFIG
+    # Логинимся в registry с отключенным TLS
+    - echo "$MY_REGISTRY_TOKEN" | docker login --tlsverify=false 192.168.0.147:5050 -u git --password-stdin
   script:
-    - echo "$MY_REGISTRY_TOKEN" | docker login 192.168.0.147:5050 -u git --password-stdin
     - docker build -t $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA ./frontend
     - docker tag $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA $CI_REGISTRY_IMAGE_FRONTEND:latest
     - docker push $CI_REGISTRY_IMAGE_FRONTEND:$CI_COMMIT_SHORT_SHA
@@ -98,7 +116,7 @@ deploy:
   script:
     - |
       ssh $SSH_USER@$PROD_SERVER "
-        echo '$MY_REGISTRY_TOKEN' | docker login 192.168.0.147:5050 -u git --password-stdin &&
+        echo '$MY_REGISTRY_TOKEN' | docker login --tlsverify=false 192.168.0.147:5050 -u git --password-stdin &&
         cd /home/$SSH_USER/project &&
         docker compose pull &&
         docker compose up -d &&
