@@ -9,6 +9,9 @@ services:
       - ./frontend/build:/usr/share/nginx/html  
     networks:
       - frontend_network
+      - watchtower_network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
 
   backend:
@@ -31,6 +34,11 @@ services:
     networks:
       - backend_network
       - database_network
+      - watchtower_network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -47,6 +55,7 @@ services:
       - monitoring
       - internal
     restart: unless-stopped
+
 
   grafana:
     image: grafana/grafana:latest
@@ -66,6 +75,7 @@ services:
       - monitoring
       - internal
     restart: unless-stopped
+
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -165,6 +175,18 @@ services:
       - database_network
       - monitoring
 
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    environment:
+      - DOCKER_API_VERSION=1.44
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 10 --label-enable
+    networks:
+      - watchtower_network
+
 networks:
   public:
     driver: bridge
@@ -181,6 +203,8 @@ networks:
     driver: bridge
     internal: true
   monitoring:
+    driver: bridge
+  watchtower_network:
     driver: bridge
 
 volumes:
