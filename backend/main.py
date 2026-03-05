@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import asyncpg
 import os
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import Optional
+
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://gleb:123@db:5432/app_db")
 
@@ -84,6 +85,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -96,7 +98,9 @@ app.add_middleware(
 async def verify_admin(admin_password: str) -> bool:
     try:
         conn = await asyncpg.connect(DATABASE_URL)
-        password = await conn.fetchval("SELECT password_hash FROM admins LIMIT 1")
+        password = await conn.fetchval(
+            "SELECT password_hash FROM admins LIMIT 1"
+        )
         await conn.close()
         return password == admin_password
     except Exception:
@@ -104,127 +108,54 @@ async def verify_admin(admin_password: str) -> bool:
 
 
 @app.get("/")
-async def root():
-    return {"message": "FastAPI работает 🚀"}
+async def root(request: Request):
+    return {
+        "message": "FastAPI работает! 🚀",
+        "endpoints": {
+            "profiles": "/profiles",
+            "admin": "/admin",
+        },
+    }
 
 
 @app.get("/health")
-async def health():
+async def health_check():
     try:
         conn = await asyncpg.connect(DATABASE_URL)
         await conn.execute("SELECT 1")
         await conn.close()
-        return {"status": "healthy"}
+        return {"status": "healthy", "database": "connected"}
     except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+        return {"status": "unhealthy", "database": str(e)}
 
-
-# =========================
-# PROFILES
-# =========================
 
 @app.get("/profiles")
 async def get_profiles():
     try:
         conn = await asyncpg.connect(DATABASE_URL)
-        rows = await conn.fetch("SELECT * FROM profiles ORDER BY created_at DESC")
+        rows = await conn.fetch(
+            "SELECT * FROM profiles ORDER BY created_at DESC"
+        )
         await conn.close()
         return {"profiles": [dict(row) for row in rows], "count": len(rows)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/profiles")
-async def create_profile(profile: ProfileCreate):
+@app.get("/profiles/{profile_id}")
+async def get_profile(profile_id: str):
     try:
         conn = await asyncpg.connect(DATABASE_URL)
-
-        row = await conn.fetchrow(
-            """
-            INSERT INTO profiles (username, avatar)
-            VALUES ($1, $2)
-            RETURNING *
-            """,
-            profile.username,
-            profile.avatar,
-        )
-
-        await conn.close()
-        return dict(row)
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.put("/profiles/{profile_id}")
-async def update_profile(profile_id: str, data: ProfileUpdate):
-    try:
-        conn = await asyncpg.connect(DATABASE_URL)
-
         row = await conn.fetchrow(
             "SELECT * FROM profiles WHERE id = $1",
             profile_id,
         )
+        await conn.close()
 
         if not row:
             raise HTTPException(status_code=404, detail="Profile not found")
 
-        await conn.execute(
-            """
-            UPDATE profiles
-            SET username = COALESCE($1, username),
-                avatar = COALESCE($2, avatar),
-                updated_at = NOW()
-            WHERE id = $3
-            """,
-            data.username,
-            data.avatar,
-            profile_id,
-        )
-
-        updated = await conn.fetchrow(
-            "SELECT * FROM profiles WHERE id = $1",
-            profile_id,
-        )
-
-        await conn.close()
-        return dict(updated)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.delete("/profiles/{profile_id}")
-async def delete_profile(profile_id: str):
-    try:
-        conn = await asyncpg.connect(DATABASE_URL)
-
-        await conn.execute("DELETE FROM profiles WHERE id = $1", profile_id)
-
-        await conn.close()
-        return {"status": "deleted"}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# =========================
-# ADMIN
-# =========================
-
-@app.post("/admin/login")
-async def admin_login(action: AdminAction):
-    try:
-        conn = await asyncpg.connect(DATABASE_URL)
-        password = await conn.fetchval("SELECT password_hash FROM admins LIMIT 1")
-        await conn.close()
-
-        if password == action.admin_password:
-            return {"status": "ok"}
-
-        raise HTTPException(status_code=403, detail="Invalid password")
+        return dict(row)
 
     except HTTPException:
         raise
