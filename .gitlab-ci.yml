@@ -8,19 +8,21 @@ default:
   services:
     - name: docker:24.0.5-dind
       command:
-        [
+        [ "--privileged", 
           "--host=tcp://0.0.0.0:2375",
           "--tls=false",
         ]
   before_script:
     - docker info
+    - | 
+      echo '{"insecure-registries": ["192.168.0.147:5050"]}' > /etc/docker/daemon.json 
 
 variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   CI_REGISTRY: "192.168.0.147:5050"
-  CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/$CI_PROJECT_NAME/backend"
-  CI_REGISTRY_IMAGE_FRONTEND: "$CI_REGISTRY/$CI_PROJECT_NAME/frontend"
+  CI_REGISTRY_IMAGE_BACKEND: "$CI_REGISTRY/root/$CI_PROJECT_NAME/backend"
+  CI_REGISTRY_IMAGE_FRONTEND: "$CI_REGISTRY/root/$CI_PROJECT_NAME/frontend"
 
 cache:
   paths:
@@ -111,4 +113,4 @@ deploy:
     - main
   environment:
     name: production
-    url: https://$PROD_SERVER
+    url: http://$PROD_SERVER
