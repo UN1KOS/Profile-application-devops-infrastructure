@@ -9,7 +9,6 @@ default:
       command: 
         - "--host=tcp://0.0.0.0:2375"
         - "--tls=false"
-        - "--insecure-registry=192.168.0.147:5050"
   before_script:
     - docker info
     - export DOCKER_TLS_VERIFY=0
