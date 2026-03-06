@@ -10,17 +10,14 @@ alerting:
 rule_files: []
 
 scrape_configs:
-  # Сам Prometheus
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
-  # Node Exporter (метрики сервера)
   - job_name: 'node'
     static_configs:
       - targets: ['node-exporter:9100']
 
-  # cAdvisor (метрики Docker контейнеров)
   - job_name: 'cadvisor'
     static_configs:
       - targets: ['cadvisor:8080']
