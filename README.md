@@ -29,7 +29,7 @@ ___
 - API: http://localhost/api  
 - Grafana: http://localhost:3001  
 - Prometheus: http://localhost:9090  
-
+- Cadvisor: http://localhost:8080
 ---
 
 ## 🏗 Архитектура
