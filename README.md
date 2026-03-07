@@ -8,6 +8,9 @@
 ![Infrastructure](https://img.shields.io/badge/infrastructure-containerized-brightgreen)
 
 ---
+<p align="center">
+  <img src="assets/ui.png" alt="Project UI" width="900">
+</p>
 
 ## 🚀 Быстрый старт
 
