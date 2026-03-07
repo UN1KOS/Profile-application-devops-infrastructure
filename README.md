@@ -15,6 +15,15 @@
 <p align="center">
   <i>Главная страница приложения</i>
 </p>
+
+<p align="center">
+  <img src="assets/admin_panel.png" alt="Project UI" width="900">
+</p>
+
+<p align="center">
+  <i>Страница админа</i>
+</p>
+---
 ## 🚀 Быстрый старт
 
 Для локального запуска (без GitLab registry и CI/CD):
