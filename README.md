@@ -12,6 +12,9 @@
   <img src="assets/ui.png" alt="Project UI" width="900">
 </p>
 
+<p align="center">
+  <i>Главная страница приложения</i>
+</p>
 ## 🚀 Быстрый старт
 
 Для локального запуска (без GitLab registry и CI/CD):
