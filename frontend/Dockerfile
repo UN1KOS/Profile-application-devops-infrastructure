@@ -1,7 +1,7 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install
 
 COPY . .
 RUN npm run build
@@ -12,8 +12,9 @@ WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/package.json ./package.json
 
-RUN npm ci --production
+
+RUN npm install -g serve
 
 EXPOSE 3000
-CMD ["npm", "start"]
 
+CMD ["serve", "-s", "build"]
